@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style></style>
+</head>
+<body>
+    <div class="tooltip"></div>
+<svg>
+</svg>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.js"></script>
+<script>
+
+let width = 1000, height = 600;
+
+let map = {};
+
+let svg = d3.select("svg")
+    .attr("viewBox", "0 0 " + width + " " + height)
+
+ // Legend dimensions
+ const legend_dim = {
+    x: (width / 5) * 3,
+    y: height - 70,
+    height: 20,
+    width: width / 3,
+  };
+
+  let legend_scale = d3
+    .scaleLinear()
+    .domain([0, 60000])
+    .range([0, legend_dim.width]);
+// Load external data
+Promise.all([d3.json("sgmap.json"), d3.csv("population2021.csv")]).then(data => {
+
+console.log(data[0]);
+console.log(data[1]);
+console.log(data[0].features[0].properties.Name);
+console.log(data[1][0].Subzone);
+console.log(data[1].length);
+for (let i = 0; i < data[1].length;i++) { 
+    /*
+    map.push({
+        key: data[1][i].Subzone.toUpperCase(),
+        value: data[1][i].Population
+    }); */
+    var datum = data[1][i];
+    map[datum.Subzone.toUpperCase()] = datum.Population
+    
+}
+console.log(map);
+
+//Color Scaling
+var colorScale = d3.scaleThreshold()
+    .domain([500, 1000, 5000, 10000, 20000, 30000, 40000, 50000, 60000])
+    .range(d3.schemeBlues[9])
+
+// Map and projection
+var projection = d3.geoMercator()
+    .center([103.851959, 1.290270])
+    .fitExtent([[20, 20], [980, 580]], data[0]);
+
+let geopath = d3.geoPath().projection(projection);
+var tooltip = d3.select(".tooltip")
+    .attr("opacity", 0)
+
+var mouseover =  function(event, d) {
+        d3.select(event.currentTarget)
+        .attr("stroke", "black")
+        .attr("opacity", 1)
+
+        tooltip
+        .transition()
+        .duration(100)
+        .style("opacity", 1)
+        .style("position", "absolute")
+        .style("background-color","white")
+        
+        tooltip
+        .html(`${d.properties.Name}` + `<br>` +`Population: ` + `${map[d.properties.Name]}`)
+        .style("top", (event.pageY)+"px")
+        .style("left",(event.pageX)+"px")
+        
+    }
+var mouseout = function(event, d) {
+        d3.select(event.currentTarget)
+        .style("stroke", "black")
+        .style("stroke-width", 1)
+        .style("opacity", 0.3)
+
+        tooltip
+        .transition()
+        .duration(100)
+        .style("opacity", 0)
+    }
+
+svg.append("g")
+    .attr("id", "districts")
+    .selectAll("path")
+    .data(data[0].features)
+    .enter()
+    .append("path")
+    .attr("d", geopath)
+    .attr("fill", function(d) {
+        //console.log(d.properties.Name);
+        //console.log(map[d.properties.Name]);
+        return colorScale(map[d.properties.Name] || 0)
+    })
+    .attr("stroke", "black")
+    .attr("stroke-width", 1)
+    .attr("opacity", 0.3)
+    .on("mouseover", mouseover)
+    .on("mouseout", mouseout)
+
+//legend
+var legend = d3.legendColor()
+    .labels(['0 to 500', '501 to 1000', '1001 to 5000', '5001 to 10000', '10001 to 20000', '20001 to 30000', '30001 to 40000', '40001 to 50000', '50001 to 60000'])
+    .scale(colorScale)
+    .title("Legend");
+
+svg.append("g")
+    .attr("transform", "translate(0, 10)")
+    .call(legend); 
+
+
+})
+
+
+</script>
+
+</body>
+</html>
